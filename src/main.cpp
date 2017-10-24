@@ -9,6 +9,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include "spline.h"
+#include "vehicle.h"
 
 using namespace std;
 
@@ -160,28 +161,6 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 
 }
 
-enum states { KL, LCL, LCR, PLCL, PLCR };
-
-states state = KL;
-
-states selectSide(int l, float dist){
-  if (dist > 80) {
-        //always try to go closer to lane 0 to go faster
-        if(l < 2){
-            return PLCR;
-        } else {
-            return PLCL;
-        }
-    } else {
-        //close to target, go to lane zero
-        if(l > 0){
-            return PLCL;
-        } else {
-            return PLCR;
-        }
-    }
-}
-
 int main() {
   uWS::Hub h;
 
@@ -225,10 +204,9 @@ int main() {
   // have a reference velocity to target
   double ref_vel = 0.0;
 
-  //reduce speed if risk of collision
-  int reduce_speed_cycle = 10;
-
-  h.onMessage([&lane, &ref_vel, &reduce_speed_cycle, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  Vehicle vehicle = Vehicle(lane, ref_vel);
+  
+  h.onMessage([&lane, &ref_vel, &vehicle, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -273,17 +251,22 @@ int main() {
 		  car_s = end_path_s;
 		}
 
-		if(state==LCL || state==LCR){
+		/*if(state==LCL || state==LCR){
 		    //keep lane
 		    state = KL;		  
-		}
+		    }*/
 
 		bool too_close = false;
 		double match_speed = 0;
 
+		vehicle.Update(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, ref_vel, prev_size*.02);
+		vehicle.NextState(sensor_fusion);
+		lane = vehicle.update.lane;
+		ref_vel = vehicle.update.ref_v;		
+
 		//find rev_v to use
 		//check for frontal collision
-		std::cout << "\n\n";
+		/*std::cout << "\n\n";
 		for(int i=0; i<sensor_fusion.size(); i++){
 		  //car is in my lane
 		  float d = sensor_fusion[i][6];
@@ -299,14 +282,8 @@ int main() {
 		    std::cout << (check_car_s-car_s) << "\n";
 		    if((check_car_s >= car_s) && ((check_car_s-car_s) < 40)){
 		      too_close = true;
-		      reduce_speed_cycle = 10;
+		      
 		      match_speed = check_speed;
-		      /*
-			if(lane>0){
-			lane = 0;
-			}
-
-		       */
 		      std::cout << "FOUND " << d << "\n";
 		      if(state==KL && abs(fmod(car_d-2*(lane), 2)) < 0.2){
 			std::cout << "################################\n";
@@ -366,6 +343,8 @@ int main() {
 		}
 		}
 
+		
+
 		//Check state for lane change
 		if(!collision_left && state == LCL){
 		  lane -= 1; 
@@ -399,6 +378,8 @@ int main() {
 		} else if (ref_vel < 0){
 		    ref_vel = 26;
 		}
+
+		*/
 
 		//Create a list of widely spaced(x,y) waypoints, evenly spaced at 30m
 		//Later we will interpolate these waypoints with a spline and fill it in with more points that control speed
