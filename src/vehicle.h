@@ -65,7 +65,7 @@ class Vehicle {
   void NextState(vector<vector<double>> sensor);
 
  private:
-  void _realise_state(States state);
+  void _realise_state(States state, vector<vector<double>> sensor_fusion);
   void _reset_data();
 
 };

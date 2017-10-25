@@ -4,7 +4,9 @@
 #include <math.h>
 #include "cost_function.h"
 
+const double MS_TO_MPH = 2.23694;
 
+const double MPH_TO_MS = 0.44704;
 
 Vehicle::Vehicle(int lane, double target_speed){
     ref_speed = target_speed;
@@ -53,7 +55,8 @@ void Vehicle::NextState(vector<vector<double>> sensor){
   states.push_back(KL);
   if(ref_lane != 0){
     //check if lane change is over before LCL again
-    if(d<(2+4*(ref_lane)+2) && d>(2+4*(ref_lane)-2)){
+    if(d<(2+4*(ref_lane)+2) && d>(2+4*(ref_lane)-2)
+       && speed > 20){ 
       //inside lane
       std::cout << "INSIDE LANE\n";
       states.push_back(LCL);
@@ -61,7 +64,8 @@ void Vehicle::NextState(vector<vector<double>> sensor){
     states.push_back(PLCL);    
   }
   if(ref_lane != 2){
-    if(d<(2+4*(ref_lane)+2) && d>(2+4*(ref_lane)-2)){
+    if(d<(2+4*(ref_lane)+2) && d>(2+4*(ref_lane)-2)
+       && speed > 20){
             std::cout << "INSIDE LANE\n";
       states.push_back(LCR);
     }
@@ -75,7 +79,7 @@ void Vehicle::NextState(vector<vector<double>> sensor){
     States n_state = states[i];
     //prepare state
     _reset_data();
-    _realise_state(n_state);
+    _realise_state(n_state, sensor);
     std::cout << "STATE " << state << "\n";
     CostFunction cost = CostFunction(this, sensor);
     double value = cost.Compute();
@@ -90,27 +94,32 @@ void Vehicle::NextState(vector<vector<double>> sensor){
   std::cout << "##################### FINAL STATE " << min_state << "\n";
   state = min_state;
   if(state==PLCL || state==PLCR){
-    std::cout << "$$$$$$$$$&&&&&&&&&&&*********((((((((())))))))) PLCL PLCR";
+    std::cout << "$$$$$$$$\n\n\n\n\n$&&&&&&&&&&&*********((((((((())))))))) PLCL PLCR";
   }
   _reset_data();
-  _realise_state(state);
+  _realise_state(state, sensor);
   //update speed
   CostFunction cost = CostFunction(this, sensor);
   float v = cost.Compute();
-  if(!collider.collision && speed < update.target_v && ref_speed < 49.5){
+  if(!collider.collision && ref_speed < update.target_v && ref_speed < 49.5){
     update.ref_v += 0.224;
-  } else if(collider.collision){
+  } else if(ref_speed > update.target_v && ref_speed > 0){
+    update.ref_v -= 0.224;
+  }
+
+
+    /*if(collider.collision){
     
     std::cout << "#############################\nSpeeds " << collider.target_speed << " " << speed << "\n";
     if(abs(collider.target_speed - speed) > 2){
       std::cout << "REDUCE SPEED \n";
       update.ref_v -= 0.224;
     }
-  }
+    }*/
   std::cout << state << " " << v << " " << update.ref_v << " " << collider.collision << " " << ref_speed << " " << update.ref_v  << "\n";
 }
 
-void Vehicle::_realise_state(States astate){
+void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion){
   state = astate;
   switch(state){
   case KL: {
@@ -170,4 +179,90 @@ void Vehicle::_realise_state(States astate){
   } else if(update.lane > 2){
     update.lane = 2;
   }
+
+  double target_speed_front = 49.5;
+  double target_distance_front = 10000;
+  double target_speed_lane_front = 49.5;
+  double target_distance_lane_front = 10000;
+  double target_speed_lane_back = 49.5;
+  double target_distance_lane_back = -10000;
+
+  //compute collision on start and end lane
+  for(int i=0; i<sensor_fusion.size(); i++){
+    //car is in my lane
+    float car_d = sensor_fusion[i][6];
+    //Safety check for speed in front
+    if((car_d<(2+4*(trajectory.lane_start)+2) && car_d>(2+4*(trajectory.lane_start)-2))){
+      double vx = sensor_fusion[i][3];
+      double vy = sensor_fusion[i][4];
+      double check_speed = sqrt(vx*vx + vy*vy);
+      double check_car_s = sensor_fusion[i][5];
+      
+      check_car_s += ((double) delta_time*check_speed);
+      //check s values greater than mine and s gap
+      double dist_to_collision = (check_car_s - s);      
+      if((check_car_s >= s) && (dist_to_collision < 30)){
+	if(target_distance_front > dist_to_collision){
+	  target_speed_front = check_speed*MS_TO_MPH;
+	  target_distance_front = dist_to_collision;
+	}	
+      }
+    }
+    
+    if(car_d<(2+4*(trajectory.lane_end)+2) && car_d>(2+4*(trajectory.lane_end)-2)){
+      double vx = sensor_fusion[i][3];
+      double vy = sensor_fusion[i][4];
+      double check_speed = sqrt(vx*vx + vy*vy);
+      double check_car_s = sensor_fusion[i][5];
+      
+      check_car_s += ((double) delta_time*check_speed);
+      //check s values greater than mine and s gap
+      double dist_to_collision = (check_car_s - s);      
+      if((trajectory.lane_end!=trajectory.lane_start && (abs(dist_to_collision) < 50))
+	 || ((check_car_s >= s) && (dist_to_collision < 30))){	
+	if(collider.distance > abs(dist_to_collision)){
+	  std::cout << "COLLISION DETECTED " << car_d << " / " << d << " " <<  dist_to_collision  << " " << check_speed << "\n";
+	  collider.distance = abs(dist_to_collision);
+	  collider.collision = true;
+	  collider.closest_approach = abs(dist_to_collision);
+	  collider.target_speed = check_speed*MS_TO_MPH;	  //*2
+	  //change targe speed
+	  if(check_car_s >= s){
+	    //car in front
+	    update.target_v = check_speed*MS_TO_MPH-2;
+	    if(target_distance_lane_front > dist_to_collision){
+	      target_speed_lane_front = check_speed*MS_TO_MPH-2;
+	      target_distance_lane_front = dist_to_collision;
+	    }
+	  } else {
+	    //car in back
+	    update.target_v = check_speed*MS_TO_MPH+4;
+	     if(target_distance_lane_back < dist_to_collision){
+	      target_speed_lane_back = check_speed*MS_TO_MPH+4;
+	      target_distance_lane_back = dist_to_collision;
+	    }
+	  }
+	}
+      } else if(!collider.collision
+		&& collider.closest_approach > dist_to_collision){
+	collider.closest_approach = dist_to_collision;
+	collider.target_speed = check_speed*MS_TO_MPH;
+      }
+    }   
+  }
+  if(state==PLCL || state==PLCR){
+    //safety speed adjust
+    if(update.target_v < target_speed_lane_back){
+      update.target_v = target_speed_lane_back;
+    }
+    if(update.target_v > target_speed_lane_front){
+      update.target_v = target_speed_lane_front;
+    }
+  }
+  
+  if(update.target_v > target_speed_front){
+    update.target_v = target_speed_front;
+  }
+    
+  std::cout << update.target_v << " " << target_speed_front << " " << target_speed_lane_front << " " << target_speed_lane_back << "\n";
 }
