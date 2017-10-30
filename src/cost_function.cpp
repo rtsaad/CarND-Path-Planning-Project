@@ -30,7 +30,7 @@ double CostFunction::Compute(){
 
 double CostFunction::Target(){
   double cost =0;
-  if(vehicle->collider.target_speed==0){
+  if(!vehicle->collider.collision){
     return 0;
   }
   int end_lane = vehicle->trajectory.lane_end;
@@ -47,7 +47,7 @@ double CostFunction::ChangeLane(){
   int start_lane = vehicle->trajectory.lane_start;
   double cost = 0;
   if(start_lane != end_lane){
-    cost += 2*COMFORT;
+    cost += COMFORT;
   }
   /*if(end_lane !=0)
     cost += COMFORT;*/
@@ -58,7 +58,7 @@ double CostFunction::ChangeLane(){
 double CostFunction::Inefficiency(){
   //Always, the best efficiency is when the speed is closest to the limit
   double cost = 0;
-  double diff = (vehicle->update.target_v - vehicle->speed)/vehicle->update.target_v;
+  double diff = (49.5 - vehicle->update.target_v)/49.5;
   cost = pow(diff,2) * EFFICIENCY;
   std::cout << "Inefficiency " << cost << "\n";
   return cost;
@@ -66,33 +66,31 @@ double CostFunction::Inefficiency(){
 
 double CostFunction::Collision(){  
   double cost = 0;
-  if(vehicle->collider.collision){   
-    std::cout <<  "Compute Collision cost " <<  vehicle->collider.distance << " " << vehicle->collider.target_speed << " " <<  vehicle->speed  << "\n";
+  if(vehicle->collider.collision){       
     double distance =  vehicle->collider.distance;
-    //distance divided by the relative speed    
-    double time_to_collide = vehicle->collider.distance/(abs( vehicle->collider.target_speed)*MPH_TO_MS);
-    //distance = pow(distance, 2);
-    //cost += exp(-distance/30)*COLLISION;
-    
+    //distance divided by the relative speed
+    double time_to_collide = abs(vehicle->collider.distance)/(abs(vehicle->speed)*MPH_TO_MS);
+    cost = exp(-pow(time_to_collide,2))*COLLISION;
+    std::cout <<  "Compute Collision cost " <<  vehicle->collider.distance << " " << vehicle->collider.target_speed << " " <<  vehicle->speed  << " " << time_to_collide  << "\n";
     //changing lane
-    if((vehicle->trajectory.lane_end != vehicle->trajectory.lane_start)
+    /*if((vehicle->trajectory.lane_end != vehicle->trajectory.lane_start)
        //car is in front
-       && ((vehicle->collider.distance > 1 && (vehicle->speed-2) <= vehicle->collider.target_speed)
+       && ((vehicle->collider.distance > 5 && (vehicle->speed) <= vehicle->collider.target_speed)
        //car is in the back
-	   || (vehicle->collider.distance < -1 && (vehicle->speed+2) >= vehicle->collider.target_speed))){
-      if(abs(vehicle->collider.distance) > 5) {
-	cost = exp(-pow(time_to_collide,2))*COLLISION;
-      } else if(vehicle->trajectory.lane_end!=vehicle->update.lane){
-	std::cout << "@@@@@\n@@@@@@@@@@\n@@@@@@@@@@\n@@@@@@@@@@@";
-	//PLCL or PLCR	
-	cost = exp(-pow(time_to_collide,2))*COLLISION/1000;
-	//adjuts speed       
+	   || (vehicle->collider.distance < -5 && (vehicle->speed) >= vehicle->collider.target_speed))){
+      //change lane only when it is safe
+      if(vehicle->collider.distance < -5){
+	//safer when car is on the back
+	cost /= 1.1;
       } else {
-	cost = exp(-pow(time_to_collide,2))*COLLISION*100;
-      }
-      
-    } else {    
-      cost = exp(-pow(time_to_collide,2))*COLLISION;
+	cost /= 1.05;
+      }      
+      }*/
+    if(vehicle->trajectory.lane_end != vehicle->trajectory.lane_start){
+      if(time_to_collide > DESIRED_BUFFER){
+	//safe to change lane
+	cost /= 10;
+      } 
     }
   }
   std::cout << "Collision " << cost << "\n";
@@ -103,26 +101,25 @@ double CostFunction::Collision(){
 double CostFunction::Buffer(){
   double cost = 0;
 
-  if(vehicle->collider.closest_approach == 10000
-     || vehicle->collider.closest_approach <= 0){
+  if(vehicle->collider.closest_approach == 10000){
     return 0;
   }
 
-  std::cout << "BUFFER " << vehicle->collider.closest_approach << "\n";
-  
-  if(vehicle->collider.closest_approach <= 3){
-    cost += 10 * DANGER;    
-  } else {
-    double time_steps = vehicle->collider.closest_approach/vehicle->collider.target_speed;
-    if(time_steps > DESIRED_BUFFER){
-      return 0;
-    }
+  double time_steps = abs(vehicle->collider.closest_approach)/(abs(vehicle->speed)*MPH_TO_MS);
 
-    double multiplier = 1.0 - pow((time_steps / DESIRED_BUFFER),2);
-    cost = multiplier * DANGER;
-    //Ideal buffer is above 20 meters
-    //cost += exp(-vehicle->collider.closest_approach/20)*DANGER;
+  std::cout << "BUFFER " << time_steps << "\n";  
+  
+  if(time_steps > DESIRED_BUFFER){
+    return 0;
   }
+
+  double multiplier = 1.0 - pow((time_steps / DESIRED_BUFFER),2);
+  cost = multiplier * DANGER;
+  if(vehicle->collider.closest_approach < 0){
+    //car in the back
+    cost /= 10;
+  }      
+
   std::cout << "Buffer " << cost << "\n";
   return cost;
 }

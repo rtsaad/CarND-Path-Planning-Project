@@ -13,9 +13,9 @@ public:
   const double DANGER     = pow(10,5);
   const double REACH_GOAL = pow(10,5);
   const double COMFORT    = pow(10,4);
-  const double EFFICIENCY = pow(10,2);
+  const double EFFICIENCY = pow(10,2);//2
 
-  const double DESIRED_BUFFER = 1.5;
+  const double DESIRED_BUFFER = 1;//1.5;
   const double PLANNING_HORIZON = 2;
 
   vector<vector<double>> sensor_fusion;
