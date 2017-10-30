@@ -229,7 +229,7 @@ double target_dist = sqrt((target_x) * (target_x) + (target_y)*(target_y));
 double N = (target_dist/(.02*ref_vel));
 ```
 
-Finally, the final part is to compute the coordinates from spline and shift back its orientation.
+Finally, the final part is to compute the coordinates from spline and shift its orientation back.
 
 ```cpp
 
