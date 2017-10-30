@@ -68,11 +68,11 @@ The behavior planner is responsible to generate the path and the speed to be fol
 
 Figure 2 depicts our FSM for our behavior planner. The FSM starts with the Keep Lane (KP) state. Depending on the system context (highway), the FSM may stay at KP state or change to Prepare to Change Lane Left or Right. At each state, all possible states are evaluated using a cost function and the state with the minimum cost is selected. The FSM machine works as follow:
 
-*1- At initial state (KL) and according to the cost function, the FSM can stay at the same state or prepare to change lanes (PLCL  or  PLCR). However, only the possible lane change (PLCL or PLCR) is available if the car is in one of the lateral lanes (lanes 0 or 2); The car will stay in the same lane (KL) if there is no other vehicle that prevents it from reaching the maximum legal speed limit of the road.
+* 1- At initial state (KL) and according to the cost function, the FSM can stay at the same state or prepare to change lanes (PLCL  or  PLCR). However, only the possible lane change (PLCL or PLCR) is available if the car is in one of the lateral lanes (lanes 0 or 2); The car will stay in the same lane (KL) if there is no other vehicle that prevents it from reaching the maximum legal speed limit of the road.
 
-*2- If the PLCL or PLCR are selected, the car prepares to change lane. The preparation checks if the car speed and the buffer space are safe to change lance. The car may stay in the PLC_ state until the buffer is safe enough to change lane or even decide to return to state KL (same lane) if the cost to change the lane is no longer relevant;
+* 2- If the PLCL or PLCR are selected, the car prepares to change lane. The preparation checks if the car speed and the buffer space are safe to change lance. The car may stay in the PLC_ state until the buffer is safe enough to change lane or even decide to return to state KL (same lane) if the cost to change the lane is no longer relevant;
 
-*3- When there is enough buffer space to change lane, the FSM will transition to LCL/LCR states. The FSM returns to state KL as soon the lane change is over (car is between the lane lines).
+* 3- When there is enough buffer space to change lane, the FSM will transition to LCL/LCR states. The FSM returns to state KL as soon the lane change is over (car is between the lane lines).
 
 ![alt text][image2]
 
@@ -80,7 +80,7 @@ Figure 2 depicts our FSM for our behavior planner. The FSM starts with the Keep 
 
 The cost function evaluates the cost for the FSM to change state. It evaluates different metrics trying to identify the next optimal state. Below, the metrics and how they are evaluated  are presented in detail:
 
-*1- Change Lane: 
+1. Change Lane: 
 
 The change lane cost function adds a ''comfort" constant penalty if the vehicle decides to change lane. 
 
@@ -90,7 +90,7 @@ if(start_lane != end_lane){
   }
 ```
 
-*2- Buffer:
+2. Buffer:
 
 The buffer cost function computes how long it has to the vehicle in front. It is computed by dividing the distance from the vehicle in front by the current speed of the ego car. Note that the cost is smaller if the vehicle in question is behind. It helps the ego car to choose a lane with no traffic in the front.
 
@@ -109,7 +109,7 @@ if(vehicle->collider.closest_approach < 0){
 }      
 ```
 
-*3- Inefficiency:
+3. Inefficiency:
 
 This function evaluates the vehicle speed defined in this state in relation to the maximum speed allowed. States with speeds closer to the maximum speed are more efficient (lower cost), in contrast, states with lower speeds are less efficient (higher cost).
 
@@ -118,7 +118,7 @@ double diff = (49.5 - vehicle->update.target_v)/49.5;
 cost = pow(diff,2) * EFFICIENCY;
 ```
 
-*4- Target:
+4. Target:
 
 The target cost evaluates the speed comparison between the ego car and the vehicle in front (possible collision). If all lanes are blocked (possible collision), this function helps the car to choose a lane which the speed of the vehicle in question matches closer to the ego car. 
 
@@ -131,7 +131,7 @@ double diff = (vehicle->collider.target_speed - vehicle->speed)/vehicle->collide
 cost = pow(diff,2) * EFFICIENCY;
 ```
 
-*5- Collision: 
+5. Collision: 
 
 The collision cost is the most important function. It strongly penalizes the states which the risk of collision is more imminent. However, in order to force the car to escape from heavy traffic, the collision cost is smaller whenever is safe to change lane. We found out that it helps the car to find a more appropriate situation, instead of just following the car ahead until it opens a passageway.
 
