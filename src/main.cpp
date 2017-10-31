@@ -243,25 +243,20 @@ int main() {
           	// Sensor Fusion Data, a list of all other cars on the same side of the road.
           	auto sensor_fusion = j[1]["sensor_fusion"];
 
-		int prev_size = previous_path_x.size();          	
-
-		// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+		int prev_size = previous_path_x.size();          			
 
 		if(prev_size >0){
 		  car_s = end_path_s;
 		}
 
-		/*if(state==LCL || state==LCR){
-		    //keep lane
-		    state = KL;		  
-		    }*/
-
 		bool too_close = false;
 		double match_speed = 0;
 
+		//compute next state
 		vehicle.Update(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, ref_vel, prev_size*.02);
 		vehicle.NextState(sensor_fusion);
-		lane = vehicle.update.lane;
+		//update lane and speed ref in order to generate path
+		lane = vehicle.update.lane;		
 		ref_vel = vehicle.update.ref_v;		
 
 		//Create a list of widely spaced(x,y) waypoints, evenly spaced at 30m

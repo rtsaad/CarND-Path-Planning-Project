@@ -1,8 +1,6 @@
 # Path Planning for the Udacity Simulator
 
-This project consists of a c++ implementation of a Path Planner to control the car using the Udacity self driving simulator. The main goal of this project is to develop a c++ path planner that successfully navigates the vehicle around the virtual highway (Udacity simulator) .... 
-
-Figure 1 depicts the car being controlled by the controller. 
+This project consists of a c++ implementation of a Path Planner to control the car using the Udacity self-driving simulator. The main goal of this project is to develop a c++ path planner that successfully navigates the vehicle around the virtual highway (Udacity simulator) without collide with any other vehicle, respecting the speed limit of 50 mph and with maximum acceleration and jerk of 10 m/s² and 50 m/s³, respectively. Figure 1 depicts an example of the car being controlled by the controller. 
 ![alt text][image1]
 
 [//]: # (Image References)
