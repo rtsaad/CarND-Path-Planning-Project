@@ -68,11 +68,11 @@ The behavior planner is responsible to generate the path and the speed to be fol
 
 Figure 2 depicts our FSM for our behavior planner. The FSM starts with the Keep Lane (KP) state. Depending on the system context (highway), the FSM may stay at KP state or change to Prepare to Change Lane Left or Right. At each state, all possible states are evaluated using a cost function and the state with the minimum cost is selected. The FSM machine works as follow:
 
-* 1- At initial state (KL) and according to the cost function, the FSM can stay at the same state or prepare to change lanes (PLCL  or  PLCR). However, only the possible lane change (PLCL or PLCR) is available if the car is in one of the lateral lanes (lanes 0 or 2); The car will stay in the same lane (KL) if there is no other vehicle that prevents it from reaching the maximum legal speed limit of the road.
+* At initial state (KL) and according to the cost function, the FSM can stay at the same state or prepare to change lanes (PLCL  or  PLCR). However, only the possible lane change (PLCL or PLCR) is available if the car is in one of the lateral lanes (lanes 0 or 2); The car will stay in the same lane (KL) if there is no other vehicle that prevents it from reaching the maximum legal speed limit of the road.
 
-* 2- If the PLCL or PLCR are selected, the car prepares to change lane. The preparation checks if the car speed and the buffer space are safe to change lance. The car may stay in the PLC_ state until the buffer is safe enough to change lane or even decide to return to state KL (same lane) if the cost to change the lane is no longer relevant;
+* If the PLCL or PLCR are selected, the car prepares to change lane. The preparation checks if the car speed and the buffer space are safe to change lance. The car may stay in the PLC_ state until the buffer is safe enough to change lane or even decide to return to state KL (same lane) if the cost to change the lane is no longer relevant;
 
-* 3- When there is enough buffer space to change lane, the FSM will transition to LCL/LCR states. The FSM returns to state KL as soon the lane change is over (car is between the lane lines).
+* When there is enough buffer space to change lane, the FSM will transition to LCL/LCR states. The FSM returns to state KL as soon the lane change is over (car is between the lane lines).
 
 ![alt text][image2]
 

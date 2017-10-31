@@ -52,6 +52,7 @@ void Vehicle::_reset_data(){
 void Vehicle::NextState(vector<vector<double>> sensor){
   States current_state = state;
   vector<States> states;
+  //select reachable states
   states.push_back(KL);
   if(state == PLCL){
     states.push_back(LCL);
@@ -60,49 +61,40 @@ void Vehicle::NextState(vector<vector<double>> sensor){
     states.push_back(LCR);
     states.push_back(PLCR);
   } else {    
-    if(ref_lane != 0){
+    if(ref_lane != 0){      
       //check if lane change is over before LCL again
       if(d<(2+4*(ref_lane)+2) && d>(2+4*(ref_lane)-2)
 	 && speed > 20){ 
-	//inside lane
-	std::cout << "INSIDE LANE\n";
-	//states.push_back(LCL);
+	//inside lane	
 	states.push_back(PLCL);    
       }      
     }
     if(ref_lane != 2){
+      //check if lane change is over before LCR again
       if(d<(2+4*(ref_lane)+2) && d>(2+4*(ref_lane)-2)
-	 && speed > 20){
-	std::cout << "INSIDE LANE\n";
-	//states.push_back(LCR);
+	 && speed > 20){	
 	states.push_back(PLCR);    
       }
     }
   }
   States min_state = KL;
   double  min_cost = 10000000;
-  
+
+  //compute cost of all reachable states
   for(int i =0; i<states.size(); i++){
     States n_state = states[i];
     //prepare state
     _reset_data();
-    _realise_state(n_state, sensor);
-    std::cout << "STATE " << state << "\n";
+    _realise_state(n_state, sensor);    
     CostFunction cost = CostFunction(this, sensor);
-    double value = cost.Compute();
-    std::cout << "Cost Compare " << value << " < " << min_cost << "\n";
+    double value = cost.Compute();  
     if(value < min_cost){
-      std::cout << "VALUE " << value << " " << n_state << "\n";
       min_state = n_state;
       min_cost = value;
     }
   }
   //update state
-  std::cout << "##################### FINAL STATE " << min_state << "\n";
   state = min_state;
-  if(state==PLCL || state==PLCR){
-    std::cout << "$$$$$$$$\n\n\n\n\n$&&&&&&&&&&&*********((((((((())))))))) PLCL PLCR";
-  }
   _reset_data();
   _realise_state(state, sensor);
   //update speed
@@ -113,17 +105,7 @@ void Vehicle::NextState(vector<vector<double>> sensor){
   } else if(ref_speed > update.target_v && ref_speed > 0){
     update.ref_v -= 0.224;
   }
-
-
-    /*if(collider.collision){
-    
-    std::cout << "#############################\nSpeeds " << collider.target_speed << " " << speed << "\n";
-    if(abs(collider.target_speed - speed) > 2){
-      std::cout << "REDUCE SPEED \n";
-      update.ref_v -= 0.224;
-    }
-    }*/
-  std::cout << state << " " << v << " " << update.ref_v << " " << collider.collision << " " << ref_speed << " " << update.ref_v  << "\n";
+  std::cout << "NEW STATE " << state << " with cost " << min_cost << "\n";
 }
 
 void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion){
@@ -198,7 +180,7 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
   for(int i=0; i<sensor_fusion.size(); i++){
     //car is in my lane
     float car_d = sensor_fusion[i][6];
-    //Safety check for speed in front
+    //Safety check for speed of car in front
     if((car_d<(2+4*(trajectory.lane_start)+2) && car_d>(2+4*(trajectory.lane_start)-2))){
       double vx = sensor_fusion[i][3];
       double vy = sensor_fusion[i][4];
@@ -215,7 +197,8 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
 	}	
       }
     }
-    
+
+    //check for car in the current lane
     if(car_d<(2+4*(trajectory.lane_end)+2) && car_d>(2+4*(trajectory.lane_end)-2)){
       double vx = sensor_fusion[i][3];
       double vy = sensor_fusion[i][4];
@@ -227,12 +210,11 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
       double dist_to_collision = (check_car_s - s);      
       if((trajectory.lane_end!=trajectory.lane_start && (abs(dist_to_collision) < 30))
 	 || ((check_car_s >= s) && (dist_to_collision < 30))){	
-	if(collider.distance > abs(dist_to_collision)){
-	  std::cout << "COLLISION DETECTED " << car_d << " / " << d << " " <<  dist_to_collision  << " " << check_speed << "\n";
+	if(collider.distance > abs(dist_to_collision)){	  
 	  collider.distance = abs(dist_to_collision);
 	  collider.collision = true;
 	  collider.closest_approach = abs(dist_to_collision);
-	  collider.target_speed = check_speed*MS_TO_MPH;	  //*2
+	  collider.target_speed = check_speed*MS_TO_MPH;	 
 
 	  if(abs(dist_to_collision) > 30){
 	  //change targe speed
@@ -260,6 +242,8 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
       }
     }   
   }
+
+  //Safety Speed check
   if(state==PLCL || state==PLCR){
     //safety speed adjust
     if(target_speed_lane_back!= 0 && update.target_v < target_speed_lane_back){
@@ -268,11 +252,9 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
     if(target_speed_lane_front!=0 && update.target_v > target_speed_lane_front){
       update.target_v = target_speed_lane_front;
     }
-  }
-  
+  }  
   if(target_speed_front!=0 && update.target_v > target_speed_front){
     update.target_v = target_speed_front-2;
   }
-    
-  std::cout << "OVER " << update.target_v << " " << target_speed_front << " " << target_speed_lane_front << " " << target_speed_lane_back << "\n";
+   
 }
