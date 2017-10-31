@@ -19,7 +19,7 @@ The source code for this project is available at [project code](https://github.c
 
 The following files are part of this project:  
 * main.cpp:  main file that integrates the controller with the simulator;
-* vehicle.cpp: vehicle class definition;
+* vehicle.cpp: vehicle class which defines the Finite State Machine;
 * cost_function.cpp: cost_function class to compute the optimun path;
 
 
@@ -82,7 +82,7 @@ The cost function evaluates the cost for the FSM to change state. It evaluates d
 
 1. Change Lane: 
 
-The change lane cost function adds a ''comfort" constant penalty if the vehicle decides to change lane. 
+The change lane cost function adds a "comfort" constant penalty if the vehicle decides to change lane (see file 'cost_function.cpp' lines 41-51). 
 
 ```cpp
 if(start_lane != end_lane){
@@ -92,7 +92,7 @@ if(start_lane != end_lane){
 
 2. Buffer:
 
-The buffer cost function computes how long it has to the vehicle in front. It is computed by dividing the distance from the vehicle in front by the current speed of the ego car. Note that the cost is smaller if the vehicle in question is behind. It helps the ego car to choose a lane with no traffic in the front.
+The buffer cost function computes how long it has to the vehicle in front. It is computed by dividing the distance from the vehicle in front by the current speed of the ego car. Note that the cost is smaller if the vehicle in question is behind. It helps the ego car to choose a lane with no traffic in the front (see file 'cost_function.cpp' lines 80-101). .
 
 ```cpp
 double time_steps = abs(vehicle->collider.closest_approach)/(abs(vehicle->speed)*MPH_TO_MS);  
@@ -120,7 +120,7 @@ cost = pow(diff,2) * EFFICIENCY;
 
 4. Target:
 
-The target cost evaluates the speed comparison between the ego car and the vehicle in front (possible collision). If all lanes are blocked (possible collision), this function helps the car to choose a lane which the speed of the vehicle in question matches closer to the ego car. 
+The target cost evaluates the speed comparison between the ego car and the vehicle in front (possible collision). If all lanes are blocked (possible collision), this function helps the car to choose a lane which the speed of the vehicle in question matches closer to the ego car (see file 'cost_function.cpp' lines 29-39). . 
 
 ```cpp
 if(!vehicle->collider.collision){
@@ -133,7 +133,7 @@ cost = pow(diff,2) * EFFICIENCY;
 
 5. Collision: 
 
-The collision cost is the most important function. It strongly penalizes the states which the risk of collision is more imminent. However, in order to force the car to escape from heavy traffic, the collision cost is smaller whenever is safe to change lane. We found out that it helps the car to find a more appropriate situation, instead of just following the car ahead until it opens a passageway.
+The collision cost is the most important function. It strongly penalizes the states which the risk of collision is more imminent. However, in order to force the car to escape from heavy traffic, the collision cost is smaller whenever is safe to change lane. We found out that it helps the car to find a more appropriate situation, instead of just following the car ahead until it opens a passageway (see file 'cost_function.cpp' lines 61-77). .
 
 ```cpp
 double time_to_collide = abs(vehicle->collider.distance)/(abs(vehicle->speed)*MPH_TO_MS);
@@ -148,7 +148,7 @@ if(vehicle->trajectory.lane_end != vehicle->trajectory.lane_start){
 
 ### 4.3 Path Generation and Speed control
 
-The FSM defines, from a high-level point of view, the lane and the speed to be followed for every state. For instance, if the car is changing lane, the FSM will return a different one from the current lane. The same is for speed, the FSM will return for every state the target speed the ego car should follow. 
+The FSM defines, from a high-level point of view, the lane and the speed to be followed for every state. For instance, if the car is changing lane, the FSM will return a different one from the current lane. The same is for speed, the FSM will return for every state the target speed the ego car should follow (see file 'main.cpp' lines 255-260). . 
 
 ```cpp
 vehicle.Update(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, ref_vel, prev_size*.02);
@@ -163,7 +163,7 @@ After the FSM returns the lane and speed to follow, the controller generates up 
 
 #### 4.3.1 Acceleration and Jerk control 
 
-The requirements of this project state that the acceleration and jerk should not exceed 10 m/s² and 50m/s³, respectively. In order to meet this requirement, the car acceleration is increased or decreased by steps of 0.224 m/s². The limit 0.224 is computed as follows: max acceleration of 10 m/s², with delta time of 0.02 seconds in miles per hour:  ![equation](http://latex.codecogs.com/gif.latex?%5Cfrac%7B10%7D%7B0.02%7D*2.24)
+The requirements of this project state that the acceleration and jerk should not exceed 10 m/s² and 50m/s³, respectively. In order to meet this requirement, the car acceleration is increased or decreased by steps of 0.224 m/s². The limit 0.224 is computed as follows: max acceleration of 10 m/s², with delta time of 0.02 seconds in miles per hour:  ![equation](http://latex.codecogs.com/gif.latex?%5Cfrac%7B2.24%7D%7B10%7D)
 
 ```cpp
 if(!collider.collision && ref_speed < update.target_v && ref_speed < 49.5){
@@ -175,7 +175,7 @@ if(!collider.collision && ref_speed < update.target_v && ref_speed < 49.5){
 
 #### 4.3.2 Path: Spline
 
-Spline is a piecewise "polynomial" parametric curve. They are popular for their simplicity of use and accuracy. Our path planner uses the Spline mathematical function for curve fitting the generated map coordinates. The spline helps to define a smooth path for the car. 
+Spline is a piecewise "polynomial" parametric curve. They are popular for their simplicity of use and accuracy. Our path planner uses the Spline mathematical function for curve fitting the generated map coordinates. The spline helps to define a smooth path for the car (see file 'main.cpp' lines 260-372). . 
 
 The path generation is an elaborate set of tasks. First, our planner has to generate equally spaced map coordinates. We use the helper function "getXY" to generate points from Freenet to Cartesian coordinates. 
 
